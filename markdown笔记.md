@@ -167,3 +167,29 @@ def test_printf():
 
 [锚点描述](#锚点名)
 
+
+
+## 数学表达式
+
+1. 分数 $\frac{分子}{分母}$ or $分子\over 分母$ 
+2. 开方 $\sqrt[9]{3}$ or $\sqrt{3}$
+3. 省略号 $\ldots$ or $\cdots$ 
+4. 矢量 $\vec{a} \cdot \vec{b} = 0$ 
+5. 积分 $\int _0^1 x^2{\rm d}x$ 
+6. 极限 $\lim_{n\rightarrow+\infty}\frac{1}{n(n+1)}$  $\lim\limits_{n\rightarrow+\infty}\frac{1}{n(n+1)}$
+7. 累加 累乘 $\sum_1^n\frac{1}{x^2}$  $\prod_{i=0}^n\frac{1}{x^2}$ $\sum\limits_1^n\frac{1}{x^2}$ $\prod\limits_{i=0}^n\frac{1}{x^2}$
+8. 希腊字母 $\alpha$ $\Alpha$ $\beta$ $\Beta$ $\gamma$ $\Gamma$ $\delta$ $\Delta$ $\epsilon$ $\Epsilon$ $\zeta$ $\Zeta$ $\theta$ $\Theta$ $\iota$ $\Iota$ $\kappa$ $\Kappa$ $\lambda$ $\Lambda$$\mu$ $\Mu$ $\nu$ $\Nu$ $\xi$ $\Xi$ $\omicron$ $\Omicron$ $\pi$ $\Pi$ $\rho$ $\Rho$ $\sigma$ $\Sigma$ $\tau$ $\Tau$ $\upsilon$ $\Upsilon$ $\phi$ $\Phi$ $\chi$ $\Chi$ $\psi$ $\Psi$ $\omega$ $\Omega$ 
+9. 数学符号 $\pm$ $\mp$ $\times$ $\div$ $\mid$ $\cdot$ $\circ$ $\ast$ $\bigodot$ $\bigotimes$ $\bigoplus$ $\leq$ $\geq$ $\neq$ $\approx$ $\equiv$ $\sum$ $\prod$ $\coprod$ 
+10. 集合运算符 $\emptyset$ $\in$ $\notin$ $\subset$ $\supset$ $\subseteq$ $\supseteq$ $\bigcap$ $\bigcup$ $\bigvee$ $\bigwedge$ $\biguplus$ $\bigsqcup$ 
+11. 对数运算符 $\log$ $\lg$ $\ln$ 
+12. 三角运算符 $\bot$ $\angle$ $30^\circ$ $\sin$ $\cos$ $\tan$ $\cot$ $\sec$ $\csc$ 
+13. 微积分运算符  $\prime $  $\int$ $\iint$ $\iiint$ $\oint$ $\lim$ $\infty$ $\nabla$ 
+14. 逻辑运算符 $\because$ $\therefore$ $\forall$ $\exists$ $\not=$ $\not>$ $\not\subset$ 
+15. 戴帽符号 $\hat{y}$ $\check{y}$ $\breve{y}$ 
+16. 箭头符号 $\uparrow$ $\downarrow$ $\Uparrow$ $\Downarrow$ $\rightarrow$ $\leftarrow$ $\Rightarrow$ $\Leftarrow$ $\longrightarrow$ $\longleftarrow$ $\Longrightarrow$ $\Longleftarrow$ 
+17. 字体 ${\rm 罗马体}$  ${\bf 黑体}$ ${\mit 数学斜体}$   $\it 意大利体$ $\cal 花体$ $\sf 等线体$ $\tt 打字机字体$ 
+18. 连线符号 $\overline{a+b+c+d}$ $\underline{a+b+c+d}$
+
+ex:$r=\frac{\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum_{i=1}^{n}(x_i-\bar{x})^2\sum_{i=1}^{n}(y_i-\bar{y})^2}}$ $r=\frac{\sum\limits_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum\limits_{i=1}^{n}(x_i-\bar{x})^2\sum\limits_{i=1}^{n}(y_i-\bar{y})^2}}$ 
+
+ 
