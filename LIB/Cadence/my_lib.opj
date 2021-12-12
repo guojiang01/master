@@ -32,20 +32,6 @@
     (Doc
       (Type "COrCapturePMDoc")
       (Frame
-        (Placement "44 0 1 -1 -1 -1 -1 0 243 0 1121"))
-      (Tab 0))
-    (Doc
-      (Type "COrPrmBrowserDoc")
-      (Frame
-        (Placement "44 0 1 -1 -1 -8 -31 5 2271 26 1141"))
-      (Path "E:\MD_FILE\LIB\CADENCE\MY_LIB.OLB")
-      (Package "TS3L301DGG")
-      (PartType "1"))
-    (Doc
-      (Type "COrPrmBrowserDoc")
-      (Frame
-        (Placement "44 0 1 -1 -1 -8 -31 5 2271 26 1141"))
-      (Path "E:\MD_FILE\LIB\CADENCE\MY_LIB.OLB")
-      (Package "88E1111-BAB")
-      (PartType "1")))
+        (Placement "44 0 1 -1 -1 -1 -1 0 200 0 1118"))
+      (Tab 0)))
   (MPSSessionName "msi"))
