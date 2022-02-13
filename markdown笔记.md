@@ -192,6 +192,11 @@ def test_printf():
 
 ex:$r=\frac{\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum_{i=1}^{n}(x_i-\bar{x})^2\sum_{i=1}^{n}(y_i-\bar{y})^2}}$ $r=\frac{\sum\limits_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum\limits_{i=1}^{n}(x_i-\bar{x})^2\sum\limits_{i=1}^{n}(y_i-\bar{y})^2}}$ 
 
+19. 矩阵: $$\begin{matrix} 0&1&1\\ 1&1&0\\ 1&0&1\\ \end{matrix}$$ ,matrix 可以替换为 pmatrix:小括号边框；bmatrix 中括号边框；Bmatrix 大括号边框；vmatrix 单竖线边框；Vmatrix 双竖线边框。
+20. 矩阵省略元素：$$\begin{bmatrix} {a_{11}}&{a_{12}}&{\cdots}&{a_{1n}}\\ {a_{21}}&{a_{22}}&{\cdots}&{a_{2n}} \\{\vdots}&{\vdots}&{\ddots}&{\vdots} \\ {a_{m1}}&{a_{m2}}&{\cdots}&{a_{mn}} \end{bmatrix}$$ 
+21. 阵列：$$\begin{array}{c|lll}{\downarrow}&{a}&{b}&{c} \\ \hline \\{R_1}&{a}&{b}&{c}\\ {R_2}&{b}&{c}&{c} \end{array}$$ 
+22. 方程组:$$\begin{cases} a_1x+b_1y+c_1z=d_1 \\ a_2x+b_2y+c_2z=d_2 \\ a_3x+b_3y+c_3z=d_3 \end{cases}$$ 
+
  
 
 ## 常用标记
