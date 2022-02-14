@@ -179,7 +179,7 @@ def test_printf():
 6. 极限 $\lim_{n\rightarrow+\infty}\frac{1}{n(n+1)}$  $\lim\limits_{n\rightarrow+\infty}\frac{1}{n(n+1)}$
 7. 累加 累乘 $\sum_1^n\frac{1}{x^2}$  $\prod_{i=0}^n\frac{1}{x^2}$ $\sum\limits_1^n\frac{1}{x^2}$ $\prod\limits_{i=0}^n\frac{1}{x^2}$
 8. 希腊字母 $\alpha$ $\Alpha$ $\beta$ $\Beta$ $\gamma$ $\Gamma$ $\delta$ $\Delta$ $\epsilon$ $\Epsilon$ $\zeta$ $\Zeta$ $\theta$ $\Theta$ $\iota$ $\Iota$ $\kappa$ $\Kappa$ $\lambda$ $\Lambda$$\mu$ $\Mu$ $\nu$ $\Nu$ $\xi$ $\Xi$ $\omicron$ $\Omicron$ $\pi$ $\Pi$ $\rho$ $\Rho$ $\sigma$ $\Sigma$ $\tau$ $\Tau$ $\upsilon$ $\Upsilon$ $\phi$ $\Phi$ $\chi$ $\Chi$ $\psi$ $\Psi$ $\omega$ $\Omega$ 
-9. 数学符号 $\pm$ $\mp$ $\times$ $\div$ $\mid$ $\cdot$ $\circ$ $\ast$ $\bigodot$ $\bigotimes$ $\bigoplus$ $\leq$ $\geq$ $\neq$ $\approx$ $\equiv$ $\sum$ $\prod$ $\coprod$ 
+9. 数学符号 $\pm$ $\mp$ $\times$ $\div$ $\mid$ $\cdot$ $\circ$ $\ast$ $\bigodot$ $\bigotimes$ $\bigoplus$ $\le$ $\ge$ $\neq$ $\approx$ $\equiv$ $\sum$ $\prod$ $\coprod$ $\gt$ $\lt$ 
 10. 集合运算符 $\emptyset$ $\in$ $\notin$ $\subset$ $\supset$ $\subseteq$ $\supseteq$ $\bigcap$ $\bigcup$ $\bigvee$ $\bigwedge$ $\biguplus$ $\bigsqcup$ 
 11. 对数运算符 $\log$ $\lg$ $\ln$ 
 12. 三角运算符 $\bot$ $\angle$ $30^\circ$ $\sin$ $\cos$ $\tan$ $\cot$ $\sec$ $\csc$ 
@@ -192,4 +192,188 @@ def test_printf():
 
 ex:$r=\frac{\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum_{i=1}^{n}(x_i-\bar{x})^2\sum_{i=1}^{n}(y_i-\bar{y})^2}}$ $r=\frac{\sum\limits_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum\limits_{i=1}^{n}(x_i-\bar{x})^2\sum\limits_{i=1}^{n}(y_i-\bar{y})^2}}$ 
 
+19. 矩阵: $$\begin{matrix} 0&1&1\\ 1&1&0\\ 1&0&1\\ \end{matrix}$$ ,matrix 可以替换为 pmatrix:小括号边框；bmatrix 中括号边框；Bmatrix 大括号边框；vmatrix 单竖线边框；Vmatrix 双竖线边框。
+20. 矩阵省略元素：$$\begin{bmatrix} {a_{11}}&{a_{12}}&{\cdots}&{a_{1n}}\\ {a_{21}}&{a_{22}}&{\cdots}&{a_{2n}} \\{\vdots}&{\vdots}&{\ddots}&{\vdots} \\ {a_{m1}}&{a_{m2}}&{\cdots}&{a_{mn}} \end{bmatrix}$$ 
+21. 阵列：$$\begin{array}{c|lll}{\downarrow}&{a}&{b}&{c} \\ \hline \\{R_1}&{a}&{b}&{c}\\ {R_2}&{b}&{c}&{c} \end{array}$$ 
+22. 方程组:$$\begin{cases} a_1x+b_1y+c_1z=d_1 \\ a_2x+b_2y+c_2z=d_2 \\ a_3x+b_3y+c_3z=d_3 \end{cases}$$ 
+
  
+
+## 常用标记
+
+**粗体** 、*斜体*、==高亮==、~~删除线~~、<u>下划线</u>、我是^上标^、我是~下标~、[超链接](www.baidu.com)、![图片](https://img.linux.net.cn/data/attachment/album/202101/01/123008jmtgg2btuddnbkng.png1)
+
+### 无序列表
+
+- 无序列表1
+- 无序列表2
+
+### 有序列表
+
+1. 有序列表
+2. 有序列表
+
+### 任务列表
+
+- [ ] 看电影
+
+- [x] 听音乐
+
+### 数学公式
+
+分数 $ f(x,y) = \frac{x^2} {y^3} $
+
+开根号 $ f(x,y) = \sqrt[n] {{x^2} {y^3}} $
+
+省略号 $ f(x_1,x_2,\ldots,x_n)=x_1+x_2+\cdots+x_n $
+
+<!--我是注释-->
+$$
+\mathbf{V}_1\times\mathbf{V}_2 = \begin{vmatrix}
+\mathbf{i} & \mathbf{j} & \mathbf{k} \\
+\frac{\partial X} {\partial u} & \frac{\partial Y} {\partial u} & 0\\
+\frac{\partial X} {\partial u} & \frac{\partial Y} {\partial u} & 0\\
+\end{vmatrix}
+$$
+
+### 脚注
+
+我们可以这样引用一个脚注[^参考]
+
+[^参考]: 这段文字是对脚注的描述
+
+
+
+### 序列图
+
+```sequence
+张三->李四:李四,吃了吗？
+note right of 李四:我现实在李四的右边
+李四-->张三:好久不见，三儿，我刚吃过！
+```
+
+
+
+### 流程图
+
+```flow
+st=>start: 开始
+op=>operation: 我是帅哥
+cond=>condition: Yes or No ?
+e=>end: 结束
+
+st->op->cond
+cond(yes)->e
+cond(no)->op
+```
+
+### Mermaid序列图
+
+```mermaid
+%% 序列图举例
+sequenceDiagram
+	张三->>李四:李四，吃了吗？
+	李四-->>张三:好久不见，三儿，我刚吃过
+	Note right of 李四:我显示在李四的右边
+```
+
+### Mermaid流程图
+
+```mermaid
+graph TD
+A[开始]-->B(我是帅哥)
+	B-->C{Yes or No ?}
+	C-->|Yes|D[结束]
+	C-->|No|B
+```
+
+### Mermaid甘特图
+
+```mermaid
+%%甘特图
+gantt
+dateFormat YYYY-MM-DD
+	title 项目开发周期
+	section 需求评审
+	需求评审 :2018-01-01,2018-01-02
+	section 功能开发
+	开发编码 :2018-01-03,2018-01-08
+	开发自测 :2018-01-08,2018-01-09
+	section 项目测试
+	第1轮测试 :2018-01-09,2018-01-14
+	第2轮测试 :2018-01-14,2018-01-16
+```
+
+### 使用HTML标签
+
+
+
+推荐使用样式给文字添加颜色<span style="color:green">绿色</span><span style="color:#fa0;font-size:20px">黄色</span><span style="color:red;font-size:30px">红色</span>
+
+
+
+2021add
+
+
+
++++
+
+```mermaid
+pie
+	title 动物数
+	"Dogs":386
+	"Cats": 85
+	"Rats":150
+	"Cows":150
+```
+
+```mermaid
+sequenceDiagram
+Alice->>Bob:Hello Bob,how are you?
+Note right of Bob:Bob thinks
+Bob-->>Alice:I am good thanks!
+```
+
+```mermaid
+graph LR
+A[Hard edge]-->B(Round edge)
+B-->C{Decision}
+C-->|One| D[Result one]
+C-->|Two| E[Result two]
+C-->|three| F[Result three]
+```
+
+```mermaid
+classDiagram
+Animal <|-- Duck
+Animal <|-- Fish
+Animal <|-- Zebra
+Animal : +int age
+Animal : +String gender
+Animal : +ismammal()
+Animal : +mate()
+class Duck{
+			+String beakcolor
+			+swim()
+			+quayck()
+}
+class Fish{
+			-int sizeInfeet
+			-canEat()
+}
+class Zebra{
+			+bool is_wild
+			+run()
+}
+```
+
+```mermaid
+stateDiagram
+[*]--> Still
+Still-->[*]
+Still-->Moving
+Moving-->Still
+Moving-->Crash
+Crash-->[*]
+```
+
