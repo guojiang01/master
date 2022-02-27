@@ -574,13 +574,13 @@ endmodule
 
 
 
-## Verilog相关
+## Verilog相关/无线通信FPGA设计
 
 1. ^ 异或，^ 同或，~& 与非，~~| 或非。
 
 2. 门类型关键字：and,nand,nor,or,xor,buf,not
 
-3. 可以简单八任务理解成返回类型的void的子程序，把函数理解成为带有返回值的子程序。
+3. 可以简单把任务理解成返回类型的void的子程序，把函数理解成为带有返回值的子程序。
 
    + 任务类似于高级编程中的“过程”，支持多种功能，能计算多个结构值，并通过被调用任务的输出形式送出。任务可以启动别的任务和函数，且可启动的任务数是没有限制的。不管有多少任务启动，只有所有任务完成后控制才能返回。
 
@@ -673,4 +673,105 @@ endmodule
          + 函数调用不能作为一条语句出现，而任务调用则可以
          + 函数调用可以出现在过程块或者连续赋值语句中，而任务调用只能出现在过程块中。
 
-         
+4. 提高系统速度的方法：其一是采用并行方式设计，其二是采用流水线设计方式。
+
+   ```verilog
+   //非流水线全加器
+   module adder8(cout,sum,clk,cina,cinb,cin);
+       input [7:0] cina,cinb;
+       input clk,cin;
+       output [7:0] sum;
+       output cout;
+       reg [7:0] sum;
+       reg cout;
+       always @ (posedge clk) begin
+           {cout,sum} = cina+cinb+cin;
+       	end
+   endmodule
+   //二级流水线
+   module adder8_2(cout,sum,clk,cina,cinb,cin);
+       input [7:0] cina,cinb;
+       input clk,cin;
+       output [7:0] sum;
+       output cout;
+       reg cout;
+       reg cout1;
+       reg [3:0] sum1;
+       reg [7:0] sum;
+       always@(posedge clk) begin //第4位相加
+           {cout1,sum1} = cina[3:0] + cinb[3:0] +cin;
+       end
+       always@(posedge clk) begin //高4位相加并且将8位拼接起来
+           {cout,sum} = {{cina[7],cina[7:4]} + {cinb[7],cinb[7:4]+cout1},sum1};
+       end
+   endmodule
+   //四级流水线
+   module adder8_4(cout,sum,clk,cina,cinb,cin);
+       input [7:0] cina,cinb;
+       input clk,cin;
+       output [7:0] sum;
+       output cout;
+       reg out;
+       reg cout1,cout2,cout3;
+       reg [2:0] sum1;
+       reg [4:0] sum2;
+       reg [6:0] sum3;
+       reg [7:0] sum;
+       always@(posedge clk ) begin
+           {cout1,sum1} = cina[1:0] +  cinb[1:0] +cin;
+       end
+       always@(posedge clk) begin
+           {cout2,sum2} = {{cina[3],cina[3:2]}+{cinb[3],cinb[3:2]}+cout1,sum1};
+       end
+       always@(posedge clk) begin
+           {cout3,sum3} = {{cina[5],cina[5:4]}+{cinb[5],cinb[5:4]}+cout2,sum2};
+       end
+       always@(posedge clk) begin
+           {cout,sum} = {{cina[7],cina[7:6]}+{cinb[7],cinb[7:6]}+cout3,sum3};
+       end
+   endmodule
+   ```
+
+5. 除法器：两个无符号二进制数(如正整数)相除的时序算法是通过“减并移位”的思想来实现的，即从被除数中重复地减去除数，直到已检测到余数小于除数为止。这样可以通过累计减法运算的次数得到商；而玉树是在减法运算结束时被除数中的剩余值。当除数较小时，这种基本电路都必须进行多次减法，因此效率都不高。另一种方法是，在进行两个数相除的运算时，通常采用的步骤是调整除数与被除数使其最高位对齐，然后反复地从被除数中减去除数，并将除数向被除数的最低为移动，且在高效除法器结构中可以并行运行这些操作步骤。而在具体的硬件硬件实现中，是通过将被除数寄存器的内容不断地向除数的最高位移动来完成除法运算的。
+
+6. 傅里叶变换：
+
+   + 连续傅里叶变换$(FFT)$：$X(f)=\int^\infty_{-\infty} x(t)e^{-j2\pi ft} dt$ , $x(t) = \frac{1}{2\pi} \int^{\infty}_{-\infty} X(f)e^{j2\pi ft} dt$  
+
+   + 离散傅里叶变换$(DFT)$：$X[k] = \sum\limits^{N-1}_{n=0} x[n] W^{kn}_{N}$ , $x[n] = \sum\limits^{N-1}_{n=0}X[k]W^{-kn}_{N}$ ,如果用$DFT$对傅里叶变换进行近似，就必须记住在时域和频域上采样的影响，分别是：
+     + 时域采样需要满足时域采样定义：即采样频域要高于$x(t)$最高频率的两倍
+     + 通过时域采样，时间函数就变成了周期性的，如果对于一个信号采样$N$次采样$DFT$,没有在一个$N$次采样窗完成整数个循环，那么就会产生频率泄露的现象。 
+
+7. $FFT$算法的基本原理
+
+   $FFT$算法的主要核心思想就是将$N$点的序列逐次分解为$(N-1)/2$，直至$2$点的$DFT$。目前的算法可以从时域和频域分别将序列分解成不同的子序列，前者就称为时间抽选法，后者称为频率抽取法。所谓的时间抽选法就是直接将$x(n)$逐次分解成奇数子序列和偶数子序列，通过求子序列的$DFT$而实现整个序列的$DFT$。频率抽选法，是在频域内将$X(k)$逐次分解为偶数点子序列和奇数点子序列，然后对分解越来越短的子序列进行$DFT$运算，就可得整个频域内序列的$FFT$流图。
+
+   1. 时间抽选法 
+
+      假设输入信号的列向量位$x[n]=[x(0),...,x(N-1)]^T$,其$DFT$输出信号列向量为$X[k]=[X(0),...,X(N-1)]^T$。将集合$x[n]$分解为两个交错集合，一个由偶数点组成，另一个由奇数点组成。$X(k)=Y(k)+W^k_N Z(k),k=0,1...,N/2-1$ $X(k+N/2)=Y(k)-W^k_NZ(k),k=0,1,...,N/2-1$.由上式的矩阵方程可以看出。采用相同的矩阵运算，最后仅求和符号不一样。每次计算都将$N$阶矩阵分为两个$N/2$阶进行，一直到最后转化为二阶矩阵。这样发分解运算必须要求$N$是$2$的幂，所以在实际中一般都要确保$N$为2的幂。这类的$FFT$算法被称为基$2FFT$的算法。
+
+    2. 频率抽选法
+
+       在频率内将$X(k)$逐次分解为偶数点子序列和奇数点子序列，然后对分的越来越短的序列进行$DFT$运算。
+
+       $$\begin{bmatrix} {X(0)} \\{X(2)} \\{X(4)} \\{\cdots} \\{X(N-2)} \end{bmatrix}$$ = $$\begin{bmatrix} {1}&{1}&{1}&{\cdots}&{1} \\{1}&{W^2_N}&{W^4_N}&{\cdots}&{W^{N-2}_N} \\{1}&{W^4_N}&{W^8_N}&{\cdots}&{W^{2(N-2)}_N} \\{\vdots}&{\vdots}&{\vdots}&{\ddots}&{\vdots} \\{1}&{W^{N-2}_N}&{W^{2(N-2)}_N}&{\cdots}&{W^{{N-2}^2}_N} \end{bmatrix}$$ $$\begin{bmatrix} {x(0)+x(N/2)} \\x(1)+x(N/2+1) \\x(2)+x(N/2+2) \\{\vdots} \\{x(N/2-1)+x(N-1)} \end{bmatrix}$$ 
+
+       = $\begin{bmatrix} T_{N/2} \end{bmatrix}$ $$\begin{bmatrix}  {x(0)+x(N/2)} \\x(1)+x(N/2+1) \\x(2)+x(N/2+2) \\{\vdots} \\{x(N/2-1)+x(N-1)}  \end{bmatrix}$$ 
+
+       对于奇数点序列，也可以表示为：$$\begin{bmatrix} X(1) \\X(2) \\X(5) \\\vdots \\X(N-1) \end{bmatrix}$$ = $\begin{bmatrix} {1}&{}&{}&{}&{} \\{}&{W_N}&{}&{}&{} \\{}&{}&{W^2_N}&{}&{} \\{}&{}&{}&{\ddots}&{} \\{}&{}&{}&{}&{W^{(N/2-1)}_N} \end{bmatrix}$ $\begin{bmatrix} {x(0)-x(N/2)} \\{x(1)-x(n/2+1)} \\{x(2)-x(n/2+2)} \\\vdots \\{x(N/2-1)-x(N-1)} \end{bmatrix}$ 
+
+       时间抽选法和频率抽选法的计算复杂度相同，二者需要的计算量也相同。时间抽选法需要对输入数据$x[n]$的数据进行重排，频率抽选法输出数据$X[k]$的顺序需要重排。但二者都能同址运算，节省大量的寄存器资源。
+
+8. 数字滤波优点：
+   + 数字滤波器的频域特性容易控制，性能指标优良
+   + 数字滤波器可以工作在极低的频率，可以方便地实现模拟滤波器难以实现的线性相位系统
+   + 数字滤波器工作稳定，一般不会受到外部环境的影响
+   + 数字滤波器灵活性和可重用性高，只许简单编程就可以修改滤波器特性，设计周期短。
+
+9. 数字滤波器的数学模型
+
+   线性时不变数字滤波器的数学模型有多种表示方法，在时域中可以用线性常系数差分方程：$y[n]=-\sum\limits^N_{k=1} d_ky[n-k]+\sum\limits^M_{q=0}p_qx[n-q]$,等效的$Z$域传递函数为：$H(z)=\frac{\sum\limits^M_{q=0}p_qz^{-q}}{1+\sum\limits^N_{k=1}d_kz^{-k}}$ ,当$d_k(1\le l \le N)$ 值不全为$0$时，该滤波器$Z$域系统函数至少包含一个极点，此时相应的单位脉冲必定无限长，所以该类滤波器常被称为无限冲激响应$(Inifinite\ Impulse\ Response,IIR型)$数字滤波器。对于一个稳定的数字系统 ，极点必须都在单位圆内部。
+
+   当$d_k$值全为$0$时，$Z$域系统函数只有零点，数字滤波器的单位冲击响应有限，通常这种数字滤波器被称为有限冲激响应$(Finite\ Impulse\ Response,FIR型)$滤波器。
+
+10. p 153
