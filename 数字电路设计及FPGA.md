@@ -798,4 +798,62 @@ endmodule
 
       $H(e^{jw})= e^{j(\frac{\pi}{2}-\frac{N-1}{2}w)} \sum\limits^{(N-1)/2}_{N=1} 2h(\frac{N-1}{2}-n) sin[(n-\frac{1}{2})w]$ ,$H(e^{jw})$的幅值关于$w=0,\pi,2\pi$成奇对称，不适合做高通和低通.
 
-p 156
+14. 窗口法。设计线性相位$FIR$滤波器步骤：
+
+    1. 确定数字滤波器的性能要求:临界频率$\{wc\}$,滤波器单位脉冲响应长度$N$.
+    2. 根据性能要求，合理选择单位脉冲响应$h(n)$的奇偶对称性，从而确定理想频率响应$H_d(e^{j\omega})$的幅频特性和相频特性。
+    3. 得到单位脉冲响应$H_d{e^{j\omega}}$后，在实际计算中，可对$H_d{e^{j\omega}}$按$M$($M$远大于$N$)点等距采样，并对其求$IDFT$得$h_m(n)$，用$h_m(n)$代替$h_d{n}$；
+    4. 选择适当的窗函数$w(n)$，根据$h(n)=h_m(n)w(n)$求所需设计的$FIR$滤波器单位脉冲响应
+    5. 求$H{e^{j\omega}}$,分析其幅频特性，若不满足要求，可适当改变窗函数形式或长度$N$，重复上述设计过程，以得到满意的结果
+
+    + 常用的几种窗函数
+      + 矩形窗：$w(n) = R_N(n)$
+      + $Hanning$窗：$w(n)=0.5[1-cos(\frac{2\pi n}{N-1})]R_N(n)$ 
+      + $Hamming$窗:$w(n) = [0.54-0.46cos(\frac{2\pi n}{N-1})]R_N(n)$ 
+      + $Blackmen窗$：$w(n) = [0.42-0.5cos(\frac{2\pi n}{N-1})+0.08cos(\frac{4\pi n}{N-1})]R_N(n)$  
+      + $Kaiser$窗:$w(n) = \frac{I_0(\beta\sqrt{1-[2n/(N-1)-1]^2})}{I_0(\beta)}R_N(n)$,$I_0(\beta)$为零阶贝塞尔函数。
+
+15. 频率采样法：频率采样法是从频域出发，将给定的理想频率响应$H_d(e^{j\omega})$加以等间隔采样：$H_d(e^{j\omega})\mid_{w=\frac{2\pi}{N}k}=H_d(k)$,然后以此$H_d(k)$作为实际$FIR$数字滤波器的频率特性的采样值$H(k)$,即令$H(k)=H_d(k)$,由$H(k)$通过$IDFT$可得有限长序列$h(n)$:$h(n)=\frac{1}{N}\sum\limits^{N-1}_{k=0} H(k) e^{j\omega 2 \pi k/N}$,$n=0,1,\cdots,N-1$,代入到$Z$变换中可得:$H(z)=\frac{1-z^{-n}}{N}\sum\limits^{N-1}_{k=0}\frac{H(k)}{1-W^{-k}_{N}z^{-1}}$,$H(e^{j\omega}) = \sum\limits^{N-1}_{k=0}\phi(\omega-\frac{2\pi}{N}k)$,$\phi(\omega)$为内插函数，$\phi(\omega) = \frac{1}{N}\frac{sin(\omega N/2)}{sin(\omega/2)} e^{-j\omega(N-1)/2}$ 。看起来，频域采样法是比较简单的，但是从内插函数$\phi(\omega)$可以看到，除在每个取样点上频率响应将严格与理想特性保持一致外，在取样点之外的响应由各取样点内插得到。因此，如果取样点之间的理想特性越平缓，则内插值与理想值的误差就越大，因而在理想特性的每个不连续点附近会出现肩峰和起伏，不连续性越大，肩峰和起伏就越大。
+
+16. 8阶的串行$FIR$低通滤波器
+
+    ```verilog
+    module FIR_Lowpass(Data_out,Data_in,clock,reset);
+        parameter order = 8;
+        parameter word_size_in = 8;
+        parameter word_size_out = 2*word_size_in + 1;
+        parameter b0 = 8'd7;
+        parameter b1 = 8'd17;
+        parameter b2 = 8'd32;
+        parameter b3 = 8'd46;
+        parameter b4 = 8'd52;
+        parameter b5 = 8'd46;
+        parameter b6 = 8'd32;
+        parameter b7 = 8'd17;
+        parameter b8 = 8'd7;
+        output[word_size_out - 1 : 0 ] Data_out;
+        input [word_size_in - 1 : 0] Data_in;
+        input clock,reset;
+        reg [word_size_in - 1 : 0] Samples[1:order];
+        integer k;
+        assign Data_out = b0*Data_in + b1*Samples[1] + b2*Samples[2] + b3*Samples[3] + b4*Samples[4] + b5*Samples[5] + b6*Samples[6] + b7*Samples[7] + b8*Samples[8];
+        always @ (posedge clock)
+            if(reset == 1) begin
+                for(k=1;k<=order;k=k+1)
+                    Samples[k]<=0;
+            	end
+        	else begin 
+                Samples[1] <= Data_in;
+                for(k=2;k<=order;k=k+1)
+                    Samples[k] <= Samples[k-1];
+            end
+    endmodule
+    ```
+
+
+17. $IIR$系统传递函数:$H(z) = \frac{\sum\limits^M_{l=0}a(l)z^{-1}}{1-\sum\limits^N_{i=1}b(i)z^{-i}}$ ,$IIR$和$FIR$滤波器相比，最大的特点是阻带衰减效率高，相位特性差。模拟滤波器设计的著名原则：全通滤波器具有单位增益，引入非零相位增益，用来实现通带内的线性化。
+
+18. 3种常用的模拟滤波器及其数字仿真
+    1. $Butterworth$滤波器性能：$Butterworth$滤波器的特点是具有通带内最大平坦的振幅特性，而且在正频率内是随频率升高而单调下降的，它的振幅平方函数为:$\mid H(\Omega)\mid ^2 = \frac1{1+c^2{\frac{\Omega}{\Omega_c}^{2N}}}$,$N$为整数，称为$Butterworth$滤波器的阶数；$\Omega_c$为通带宽度或$3dB$带宽，简称为截止频率。$Butterworth$滤波特性在通带和阻带内都是单调变化的，这种特性使得其在直流附近与理想特性有良好的近似。当频率较高时，偏离理想特性就渐大。而滤波器的阶数越高，近似就越好，但复杂度也急剧上升。
+    2. $Chebyshev$滤波器性能：$Chebyshev$滤波器频率特性在通带内时等纹波的，在阻带内时单调下降的，它比同阶的$Butterworth$滤波器下降快。通带内波动的峰值个数与阶数$N$有关，$N$越大，波动越快。振幅平方函数为：$\mid H(\Omega)\mid^2 = \frac1{1+\epsilon^2C_N^2(\frac{\Omega}{\Omega_c})}$,$N$为滤波器的阶数；$\Omega_c$为通带宽度，当$\epsilon =1$时，它等于通带的$3dB$截止频率；$C_N()$是$Chebyshev$多项式，$C_N(x)$的定义为：$C_N(x)=cos[Ncos^{-1}x],|x|<1$,$C_N(x)=cosh[Ncosh^{-1}x],|x|>1$.可以证明，在$0\leq x\leq 1$范围内，$C^2_N(x)$在0与1之间变化着，而在$x>1$的范围内，$C_N(x)$单调地增加，$N$越大增长越快，且比任何同阶的多项式增长得都快。
+    3. 椭圆滤波器:通带和阻带内都有等纹波的振幅特性。它之所以被称为椭圆滤波器是因为振幅特性是由雅可比椭圆函数来决定的，其振幅平方函数为$\mid H(\Omega)\mid^2 = \frac{1}{1+\epsilon^2J^2_N(\Omega)}$,$J^2_N(\Omega)$为雅可比椭圆函数，$N$为滤波器的阶数。
