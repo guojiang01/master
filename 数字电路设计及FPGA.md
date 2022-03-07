@@ -851,9 +851,415 @@ endmodule
     ```
 
 
-17. $IIR$系统传递函数:$H(z) = \frac{\sum\limits^M_{l=0}a(l)z^{-1}}{1-\sum\limits^N_{i=1}b(i)z^{-i}}$ ,$IIR$和$FIR$滤波器相比，最大的特点是阻带衰减效率高，相位特性差。模拟滤波器设计的著名原则：全通滤波器具有单位增益，引入非零相位增益，用来实现通带内的线性化。
+17. $IIR$系统的差分方程:$y(n) = \sum\limits^M_{l=0}a(l)x(n-l)+\sum\limits^N_{i=1}b(i)y(n-i)$,传递函数:$H(z) = \frac{\sum\limits^M_{l=0}a(l)z^{-1}}{1-\sum\limits^N_{i=1}b(i)z^{-i}}$ ,$IIR$和$FIR$滤波器相比，最大的特点是阻带衰减效率高，相位特性差。模拟滤波器设计的著名原则：全通滤波器具有单位增益，引入非零相位增益，用来实现通带内的线性化。
 
 18. 3种常用的模拟滤波器及其数字仿真
     1. $Butterworth$滤波器性能：$Butterworth$滤波器的特点是具有通带内最大平坦的振幅特性，而且在正频率内是随频率升高而单调下降的，它的振幅平方函数为:$\mid H(\Omega)\mid ^2 = \frac1{1+c^2{\frac{\Omega}{\Omega_c}^{2N}}}$,$N$为整数，称为$Butterworth$滤波器的阶数；$\Omega_c$为通带宽度或$3dB$带宽，简称为截止频率。$Butterworth$滤波特性在通带和阻带内都是单调变化的，这种特性使得其在直流附近与理想特性有良好的近似。当频率较高时，偏离理想特性就渐大。而滤波器的阶数越高，近似就越好，但复杂度也急剧上升。
+    
     2. $Chebyshev$滤波器性能：$Chebyshev$滤波器频率特性在通带内时等纹波的，在阻带内时单调下降的，它比同阶的$Butterworth$滤波器下降快。通带内波动的峰值个数与阶数$N$有关，$N$越大，波动越快。振幅平方函数为：$\mid H(\Omega)\mid^2 = \frac1{1+\epsilon^2C_N^2(\frac{\Omega}{\Omega_c})}$,$N$为滤波器的阶数；$\Omega_c$为通带宽度，当$\epsilon =1$时，它等于通带的$3dB$截止频率；$C_N()$是$Chebyshev$多项式，$C_N(x)$的定义为：$C_N(x)=cos[Ncos^{-1}x],|x|<1$,$C_N(x)=cosh[Ncosh^{-1}x],|x|>1$.可以证明，在$0\leq x\leq 1$范围内，$C^2_N(x)$在0与1之间变化着，而在$x>1$的范围内，$C_N(x)$单调地增加，$N$越大增长越快，且比任何同阶的多项式增长得都快。
+    
     3. 椭圆滤波器:通带和阻带内都有等纹波的振幅特性。它之所以被称为椭圆滤波器是因为振幅特性是由雅可比椭圆函数来决定的，其振幅平方函数为$\mid H(\Omega)\mid^2 = \frac{1}{1+\epsilon^2J^2_N(\Omega)}$,$J^2_N(\Omega)$为雅可比椭圆函数，$N$为滤波器的阶数。
+    
+    4. 一个良好的滤波器结构应当考虑到以下几个方面
+       + 使用尽量少的存储单元
+       + 系数对零极点敏感度低，以减少字长效应的影响
+       + 计算量小，稳定性好，运算精度高
+       + 尽可能地具备并行运算能力，以便FPGA芯片快速实现 
+    
+    19. ```verilog
+        //verilog实现一个8阶的IIR滤波器
+        module IIR_Filter_8(Data_out,Data_in,clock,reset);
+            parameter order = 8;
+            parameter word_size_in = 8;
+            parameter word_size_out = 2*word_size_in+2;
+            parameter b0 = 4;	//前馈滤波器系数
+            parameter b1 = 22;
+            parameter b2 = 65;
+            parameter b3 = 110;
+            parameter b4 = 110;
+            parameter b5 = 65;
+            parameter b6 = 22;
+            parameter b7 = 8;
+            
+            parameter a1 = 25;      //反馈滤波器系数
+            parameter a2 = -70;
+            parameter a3 = 99;
+            parameter a4 = -85;
+            parameter a5 = 47;
+            parameter a6 = -16;
+            parameter a7 = 4;
+            parameter a8 = 1;
+            output[word_size_out - 1 : 0] Data_out;
+            input [word_size_in - 1 : 0]  Data_in;
+            input clock,reset;
+            reg[word_size_in-1:0] Samples_in[1:order];
+            reg[word_size_in-1:0] Samples_out[1:order];
+            wire [word_size_out-1:0] Data_feedforward;
+            wire [word_size_out-1：0] Data_feedback;
+            integer k;
+            
+            assign Data_feedforward = b0*Data_in + b1*Samples_in[1] + b2*Samples_in[2] + b3*Samples_in[3] + b4*Samples_in[4] + b5*Samples_in[5] + b6*Samples_in[6] +b7*Samples_in[7];
+            assign Data_feedback = a1*Samples_out[1] + a2*Samples_out[2] + a3*Samples_out[4] + a5*Samples_out[5] + a6*Samples_out[6] + a7*Samples_out[7] + a8*Samples_out[8];
+            assign Data_out = Data_feedforward + Data_feedback;
+            
+            always @ (posedge clock)
+                if(reset == 1)
+                    for(k=1;k<=order;k=k+1) begin
+                        Samples_in[k] <= 0;
+                        Samples_out[k] <=0;
+                    end
+            	 else begin
+                     Samples_in[1] <= Data_in;
+                     Samples_out[1] <= Data_out;
+                     for(k=2;k<=order;k=k+1) begin
+                         Samples_in[k] <= Samples_in[k-1];
+                         Samples_out[k] <= Samples_out[k-1];
+                     end
+                 end
+        endmodule    
+        ```
+    
+        上述滤波器采用并行操作，只需要两个时钟周期，就可以得到滤波结果，但由于同时对多个乘累加器进行操作，工作频率不能太高，同样，采用加寄存器的方法来提高IIR滤波器的工作频率，
+    
+        级联型是一种较为容易实现的高效方式，其主要思想是将系统函数$H(z)$的分子、分母多项式分解为二阶子系统的乘积形式。$H(z) = \prod\limits^K_{k=1}H_k(z)$,其中，每一级的二姐子系统的传输函数形式为：$H_k(z) = \frac{1+\alpha_{1i}z^{-1}+\alpha_{2i}z^{-2}}{1+\beta_{1i}z^{-1}+\beta_{2i}z^{-2}}$  
+    
+        ```verilog
+        //verilog实现一个2阶的级联型IIR滤波器
+        module iir_c(clk,reset,x_in,y_out);
+            input clk;
+            input reset;
+            input [15:0] x_in;
+            output [15:0] y_pit;
+            wire [15:0] y1_out;
+            wire [15:0] a1_1_1,a1_2_1,b1_1_1,b1_2_1;
+            wire [15:0] a2_1_1,a2_2_1,b2_1_1,b2_2_1;
+            
+            assign a1_1_1 = 36504;
+            assign a1_2_1 = -23396;
+            assign b1_1_1 = 0;
+            assign b1_2_1 = 32768;
+            assign a2_1_1 = 0;
+            assign a2_2_1 = 58832;
+            assign b2_1_1 = 32768;
+            assign b2_2_1 = 36054;
+            sub2 sub2_1(.clk(clk), .reset(reset), .a_1_1(a1_1_1), a_2_1(a1_2_1), .b_1_1(b1_1_1), .b_2_1(b1_2_1), x_in(x_in), .y_out(y1_out));
+            sub2 sub2_1(.clk(clk), .reset(reset), .a_1_1(a2_1_1), a_2_1(a2_2_1), .b_1_1(b2_1_1), .b_2_1(b2_2_1), x_in(x_in), .y_out(y1_out));
+        endmodule
+        //=======================================
+        mdoule sub2(clk,reset,a_1_1,a_2_1,b_1_1,b_2_1,x_in,y_out);
+        input clk;
+        input reset;
+        input [15:0] a_1_1;
+        input [15:0] a_2_1;
+        input [15:0] b_1_1;
+        input [15:0] b_2_1;
+        input [15:0] x_in;
+        output [15:0] y_out;
+        reg [47:0] x_temp;
+        reg [47:0] y_temp;
+        wire [31:0] x_t;
+        wire [31:0] y_t;
+        
+        always@(posedge clk ) begin 
+            if(!reset) begin
+                x_temp <= 0;
+                y_temp <= 0;
+            end 
+           	else begin
+                x_temp[47:0] <= {x_temp[31:0],x_in};
+                y_temp[47:0] <= {y_temp[31:0],x_t[31:16]};
+            end
+        end 
+        assign x_t = reset?x_temp[47:32]*a_2_1+x_temp[31:16]*b_1_1+x_temp[15:0]:0;
+        assign y_t = reset?y_temp[47:32]*b_2_1+y_temp[31:16]*b_1_1+y_temp[15:0]:0;
+        assign y_out[15:0] = y_t[31:16];
+        endmodule
+        ```
+    
+19. 脉冲成型滤波器：矩形脉冲通过限带信道时，脉冲信号会在时间上扩展。每个符号的脉冲将扩展到相邻信号的码元内，造成码间干扰，并导致接收机在检测码元时发生错误的概率增大。一种常用的方法是增大宽带，但由于带宽在数字移动通信系统中是非常宝贵和紧缺的资源，所以需要一种技术能够在减少码间干扰影响的同时，还能够减少调制带宽和抑制频带外的扩散，提高信号频谱的利用率。
+    1. 在数字通信中，基带信号的频谱范围很宽，为了有效地利用信道，在信号传输出去之前都要对信号频谱压缩，使其在消除码间干扰和达到最佳检测的前提下，大大提高频带的利用率。利用脉冲成型滤波器对信号进行滤波，就能有效地达到这一功能。在数字信号传输过程中，只要求特定时刻的波形幅值如何无失真地传送，而不必要求整个波形无失真。奈奎斯特第一准则告诉我们：如果信号经传输后整个波形发生了变化，但只要其特定点地抽样值保持不变，那么用再次抽样的方法，仍然可以准确无误地恢复原始信码。
+    2. 满足奈奎斯特第一准则的滤波器有很多种，在无线通信中得到广泛应用的是其幅度频率响应具有奇对称升余弦形状过渡带的一类滤波器，通常称为升余弦滚降滤波器。升余弦滤波器本身是一种有限脉冲响应$(FIR)$滤波器，其传递函数的表达式为：$X_{RC}(F) = \begin{cases} T_s,\qquad \qquad 0\le|f|\le\frac{1-\alpha}{2T_s} \\ \frac{T_s}{2}\{1+cos[\frac{\pi T_s}{\alpha}(|f|-\frac{1-\alpha}{2T_s})]\},\qquad \frac{1-\alpha}{2T_s} \le|f|\le\frac{1+\alpha}{2T_s} \\0, \qquad \qquad |f|>\frac{1+\alpha}{2T_s} \end{cases}$   ,其中，$\alpha$为滚降因子，取值为：$0\le\alpha\le1$.在$\alpha = 0$时，滤波器的带宽$W$为$1/(2T_s)$，称为奈奎斯特带宽；$\alpha = 0.5$时，滤波器的截止频率$W$为$(1+\alpha)/(2T_s) = (1+0.5)/(2T_s)$，等于$0.75R_s$;$\alpha=1$，滤波器的截止频率$W$为$(1+1)/(2T_s)=R_s$。
+
+20. 多速率滤波器有多速率FIR滤波器、积分级联梳状(CIC)滤波器和半带(HB)滤波器等。多速率滤波器的主要作用有三点：抽取（即降低信号速率）、插值（即提高信号速率）和低通滤波。
+
+    ```VERILOG
+    //Verilog实现输入信号的4倍插值
+    module decimate_4(clk,reset,x,y)
+        input clk;
+        input reset;
+        input [7:0] x;
+        output [7:0] y;
+        reg [1:0] cnt;
+        reg [7:0] y;
+        always@(posedge clk) begin
+            if(!reset)
+                cnt <= 0;
+            else begin
+                cnt <= cnt  + 1;
+                if(cnt == 0)
+                    y<=x;
+                else 
+                    y <=0;
+            end
+        end
+    endmodule
+    ```
+
+21. 信号多项分解的FPGA实现:用Verilog实现一个4阶的多项抽取滤波器，实现2倍下采样，其多相传递函数为$G(z)=(124+57z^{-2})/256+z^{-1}(214-33z^{-2})$ 
+
+    ```verilog
+    module polyfilter(clk,clk2,reset,x_in,y_out);
+        parameter even=0,odd=1;
+        input clk;		//输入信号的速率
+        input clk2;		//输入信号的速率的一半
+        input reset;
+        input [7:0] x_in;	//输入信号
+        output [8:0] y_out; 	//输出信号
+        //各个中间寄存器，包括系数及乘法器的输入参数
+        reg [16:0] m0,m1,m2,m3,r0,r1,r2,r3;
+        reg [16:0] x33,x99,x107;
+        reg [16:0] y;
+        reg [7:0] x_odd,x_even,x_wait; //多相分解后的奇偶信号
+        wire [16:0] x_odd_sxt,s_even_sxt;
+        reg state;
+        always@(posedge clk) begin
+            if(!reset) begin
+                state <= even;
+                x_even <= 0;
+                x_odd <= 0;
+            end
+            else begin
+                case(state) //奇偶序列分开
+                    even:begin
+                        x_even <= x_in;
+                        x_odd <= x_wait;
+                        state <= odd;
+                    end
+                    odd:begin
+                        x_wait <= x_in;
+                        state <= even;
+                    end
+                endcase
+            end
+        end 
+        assign x_odd_sxt <= {{9{x_odd[7]}},x_odd};
+        assign x_even_sxt <= {{9{x_even[7]}},x_even};
+        
+        always@(posedge clk) begin
+            if(!reset) begin
+                x33 =0;
+                x99 =0;
+                x107 =0;
+                m0 = 0;
+                m1 = 0;
+                m2 = 0;
+                m3 = 0;
+            end 
+            else begin
+                x33 = (x_odd_sxt <<5 )+s_odd_sxt;
+                x99 = (x33 <<1)+x33;
+                m0 = (x_even_sxt <<7)-(x_even_sxt<<2);//m0 = 124;
+                m1 = x107<<1;
+                m2 = (x_even_sxt <<6)-(x_even_sxt<<3)+x_even_sxt;
+                m3 = x33;
+            end 
+        end
+        always@(negedge clk2) begin
+            if(!reset) begin
+                r0 <= 0;
+                r2 <= 0;
+                r1 <= 0;
+                r3 <= 0;
+            end 
+            else begin
+                r0 <= r2+m0;
+                r2 <= m2;
+                r1 <= -r3 + m1;
+                r3 <= m3;
+                y <= r0+r1;
+            end
+        end
+        assign y_out = y[16:8];
+    endmodule
+    ```
+
+    22. CIC滤波器：在数字信号处理中，随着采用频率的提高，采用后的数据流速率变得很高，这会导致后序的信号处理速度跟不上，因此有必要对A/D后的数据流进行降速处理。多速率信号处理技术为这种降速处理的实现提供了理论依据。实现取样速率变换（抽取和内插）的关键问题是如何实现抽取前或内插后的数字滤波。无论是抽取还是内插，或者是取样率的分数倍变换，都需要设计一个满足抽取或内插(扛混叠)要求的数字滤波器。该滤波器性能的好坏直接影响取样速率变换的效果及实时处理能力。在这方面，积分级联梳状(CIC)滤波器和半带(HB)滤波器具有比较好的性能。CIC滤波器是无线通信中的常用模块，一般用于数字下变频(DDC)和数字上变频(DUC)系统。CIC滤波器的结构简单，没有乘法器，只有加法器、积分器和寄存器，适合工作在高采样率。CIC滤波器是一种基于零极点相消的FIR滤波器，已经被证明是在高速抽取或插值系统中非常有效的单元。CIC滤波器包括两个基本组成部分：积分器和梳状部分。
+    
+        ```verilog
+        //单级抽取CIC滤波器的Verilog实现。单级、抽取率为2的8位CIC抽取滤波器，系统工作时的频率和数据速率相等
+        module cic_dec_2_simgle(clk,clk1,reset,x_in,y_out)
+            input clk; //系统工作时钟
+            input clk1;//系统工作时钟的一半
+            input reset //系统控制信号
+            input [7:0] x_in;//单级CIC滤波器输入信号
+            output [7:0] y_out;//单级CIC滤波器输出信号
+            reg [15:0] x_t,y_t; //用于移位的寄存器
+            reg [7:0] int_out; //积分滤波器部分的输出
+            always@(posedge clk) begin
+                if(!reset) begin
+                    x_t <= 0;
+                    int_out <= 0;
+                end
+                else begin
+                    x_t <={x_t[7:0],x_in[7:0]};
+                end
+                int_out <= x_t[7:0]+x_t[15:8]; //完成单级积分滤波
+            end
+            always@(posedge clk1) begin //完成抽取，因为clk1是clk的一半
+                if(!reset) begin
+                    y_t <=0;
+                end
+                else begin
+                    y_t <={y_t[7:0],int_out[7:0]};
+                end
+            end
+            //完成单级梳状滤波
+            assign y_out=y_t[7:0]-y_t[15:8];
+        endmodule
+        //多级抽取CIC滤波器的Verilog实现：一个3级、抽取率为2的8位Hogenauer CIC抽取滤波器，系统工作时钟的频率和数据速率相等
+        module cic_dec_8_three(clk,clk1,reset,x_in,y_out)
+            input clk; //系统工作时钟
+            input clk1;
+            input reset; //系统控制信号
+            input [7:0] x_in; //3级CIC滤波器输入信号
+            output [7:0] y_out; //3级CIC滤波器输出信号
+            reg [7:0] y_out; //将输出设置成寄存器行
+            reg [15:0] i1,i2,i3,c1,c2,c3; //用于移位的寄存器
+            reg [7:0] int_out1,int_out2,int_out3,comb_out1,comb_out2;
+            //3级积分滤波器的级联
+            always@(posedge clk) begin
+                if(!reset) begin
+                    i1 <= 0; i2 <= 0; i3 <= 0; int_out1 <= 0;int_out2 <= 0;int_out3 <= 0;
+                end
+                else 
+                    i1 <= {i1[7:0],x_in};
+                i2 <= {i2[7:0],int_out1};
+                i3 <= {i3[7:0],int_out2};
+                int_out1 <= i1[7:0]+i1[15:8];
+                int_out2 <= i2[7:0]+i2[15:8];
+                int_out3 <= i3[7:0]+i3[15:8];
+            end
+            //3级梳状滤波器的级联
+            always@(posedge clk) begin
+                 if(!reset) begin
+                     c1 <= 0; c2 <= 0; c3 <=0; comb_out1 <=0;comb_out2<=0;y_out <= 0;
+                 end
+                else begin
+                    c1 <= {c1[7:0],int_out3};
+                    c2 <= {c2[7:0],comb_out1);
+                    c3 <= {c3[7:0],comb_out2};
+                   comb_out1 <= c1[7:0]-c1[15:8];
+                   comb_out2 <= c2[7:0]-c2[15:8];
+                   y_out <= c3[7:0]-c3[15:8];
+                   end
+               end
+        endmodule     
+        //单级插值CIC滤波器，单级、过采样为2的8位CIC插值滤波器，系统工作时钟的频率是数据速率的2倍
+        module cic_interp_2_signle(clk,clk1,reset,x,y)
+            input clk;   //模块工作时钟
+            input clk1;   //其数值为clk的一半
+            input reset;  
+            input [7:0] x;
+            output [7:0] y;
+            reg [15:0] x_t,y_t;  //用于移位的寄存器
+            reg [7:0] ubt_out,temp; //中间变量
+            always@(posedge clk1) begin
+                if(!reset) begin
+                    x_t <= 0;
+                    int_out <= 0;
+                end
+                else begin
+                    x_t <= {x_t[7:0],x};
+                    int_out <= x_t[7:0]+x_t[15:8];
+                end
+            end 
+            always@(posedge clk) begin
+                if(!reset) begin
+                    y_t <= 0;
+                    temp <=0;
+                end
+                else begin
+                    if(clk1 == 1)    //完成插值
+                        temp <= 0;
+                    else 
+                        temp <=int_out;
+                    	y_t <= {y_t[7:0],temp};
+                end
+            end
+            assign y_t[7:0] - y_t[15:8];
+        endmodule
+        //多级插值CIC滤波器的verilog实现：单级、过采样为2的8位CIC插值滤波器，系统工作时钟的频率是数据速率的2倍
+        module cic_interp_8_three(clk,clk1,reset,x_in,y_out);
+            input clk;
+            input clk1;
+            input reset;
+            input [7:0] x_in;
+            output [7:0] y_out;
+            reg [7:0] y_out;
+            reg [15:0] i1,i2,i3,c1,c2,c3;
+            reg[7:0] int_out1,int_out2,int_out3;
+            reg [7:0] comb_out1,comb_out2,temp;
+            always@(posedge clk1) begin
+                if(!reset) begin
+                    i1 <= 0; i2 <= 0; i3 <= 0; int_out1 <= 0;int_out2 <= 0;int_out3 <= 0;
+                end
+                else begin
+                     i1 <= {i1[7:0],x_in};
+                    i2 <= {i1[7:0],int_out1};
+                    i3 <= {i1[7:0],int_out2};
+                    int_out1 <= i1[7:0]+i1[15:8];
+                	int_out2 <= i2[7:0]+i2[15:8];
+                	int_out3 <= i3[7:0]+i3[15:8];
+                end
+            end
+            always@(posedge clk) begin
+                if(!reset) begin
+                    temp <= 0; c1 <= 0; c2 <= 0; c3 <=0;comb_out1 <=0;comb_out2 <=0;
+                end
+                else begin
+                    if(clk1==1)
+                        temp <=0;
+                    else 
+                        temp <= int_out3;
+                    c1 <= {c1[7:0],temp};
+                    c2 <= {c1[7:0],comb_out1};
+                    c3 <= {c1[7:0],comb_out2};
+                    comb_out1 <= c1[7:0]-c1[15:8];
+                    comb_out2 <= c2[7:0]-c2[15:8];
+                    y_out <= c3[7:0]-c3[15:8];
+                end
+            end
+        endmodule
+        ```
+
+23. FIR半带滤波器：可以将离散系统的工作频率范围分成对等的两个对称部分，且运算复杂度低，在多速率信号处理中有着重要的地位。由于FIR半带滤波器能够提供比IIR半带滤波器更精确的线性相位，而线性相位对通信信号处理是至关重要的，
+    + 由于半带滤波器是偶对称、奇次的线性相位FIR滤波器，因而还具有以下三个性质：第一，滤波器的阶数N为奇数；第二，滤波器的冲击响应$h(n)$为实数；第三，滤波器的幅度函数$H(w)$为偶函数。
+
+24. 数字调制与解调
+    + 从信号空间的角度看，调制实际上是把信号从信道编码后的汉明空间映射成调制后的欧式空间。
+    + 调制的功能主要有频谱搬移、抗干扰、提供频谱利用率，以及改变信号的峰均比
+    + 调制的三种形式：振幅键控、移频键控、移相键控，即分别使用基带信号来控制调制信号的幅度、频率和相位。    
+    + 线性调制是指已调波中被调参数随调制信号成线性变化的调制过程。此外，在二进制基带调制中，为了彻底消除由于相位跃变带来的峰均比增加和频带扩展问题，又引入了有记忆的非线性连续相位调制CPM、最小频移键控MSK、GMSK及平滑调频TFM等。GSM系统的恒包络调制GMSK，CDMA系统中的BPSK和QPSK
+
+ 1. 欧式距离：通过将二进制的已调信号矢量表达为二维欧氏空间的距离，可以分析信号的抗干扰能力。显然最小欧氏距离越大，抗干扰能力越强
+
+    + 2-ASK调制：当基带信号为0时，不发送载波。当基带信号为1时，发送归一化载波。
+
+    + 2-FSK调制：当基带信号为0时，发送频率为$f_0$的载波；当基带信号为1时，发送频率为$f_1$的载波。因为需要保证频率为$f_0$与$f_1$的信号互不干扰，所以二者应当正交。
+
+    + 2-PSK调制：当基带信号为0时，发送归一化幅度且相位为$\phi _0=0$的载波；当基带信号为1时，发送归一化幅度且相位为$\phi_1=\pi$的载波。
+
+    + 2-ASK、2-FSK、2-PSK的欧氏距离分别为1、$\sqrt2$和2。因此，2-PSK的性能优于2-FSK，2-FSK的性能优于2-ASK.
+
+    + 采用相干解调时，各种调制方式的误比特率公式为：$2-ASK:\qquad P_b=\frac12erfc(\sqrt\frac{E_b}{4N_0})=Q(\sqrt\frac{E_b}{2N_0})$ 
+
+      $2-FSK: \qquad P_b=\frac12erfc(\sqrt\frac{E_b}{2N_0})=Q(\sqrt\frac{E_b}{N_0})$ 
+
+      $2-PSK：\qquad P_b=\frac12erfc(\sqrt\frac{E_b}{N_0})=Q(\sqrt\frac{2E_b}{N_0})$   
+
+      由于$Q(\cdot)$是减函数，同样可以得到$2-PSK$性能最佳的结论
+
+    + 信号功率谱密度(PSD)定义：$P_x(f)=\lim\limits_{T\rightarrow+\infty}(\frac{E[|X_T(f)|^2]}{T})$ ,$X_T(f)$为$x(t)$的傅里叶变换。
+
+    2.  香农第二定律：在加性高斯白噪声环境中，在任意小的错误概率下，带宽效率$\eta$受制于信噪比$\eta \le \frac{R_b}{B}=log_2(1+SNR)$ ,$R_b$为二进制比特速率，$B$为有效带宽，$SNR$为信噪比。
+    3. $2-ASK$调制：又称为二进制启闭键控(OOK,On-Off Keying),它是以单极性不归零码来控制载波的开启和关闭的，其调制方法出现的比模拟调制还早。虽然$2-ASK$的抗干扰性能不如其他调制方式，在无线通信中未得到实际应用，在光纤通信中广泛应用。
