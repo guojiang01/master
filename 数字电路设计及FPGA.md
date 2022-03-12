@@ -1261,5 +1261,379 @@ endmodule
 
     + 信号功率谱密度(PSD)定义：$P_x(f)=\lim\limits_{T\rightarrow+\infty}(\frac{E[|X_T(f)|^2]}{T})$ ,$X_T(f)$为$x(t)$的傅里叶变换。
 
-    2.  香农第二定律：在加性高斯白噪声环境中，在任意小的错误概率下，带宽效率$\eta$受制于信噪比$\eta \le \frac{R_b}{B}=log_2(1+SNR)$ ,$R_b$为二进制比特速率，$B$为有效带宽，$SNR$为信噪比。
+    2. 香农第二定律：在加性高斯白噪声环境中，在任意小的错误概率下，带宽效率$\eta$受制于信噪比$\eta \le \frac{R_b}{B}=log_2(1+SNR)$ ,$R_b$为二进制比特速率，$B$为有效带宽，$SNR$为信噪比。
+    
     3. $2-ASK$调制：又称为二进制启闭键控(OOK,On-Off Keying),它是以单极性不归零码来控制载波的开启和关闭的，其调制方法出现的比模拟调制还早。虽然$2-ASK$的抗干扰性能不如其他调制方式，在无线通信中未得到实际应用，在光纤通信中广泛应用。
+    
+       ![2-ask.png](https://s2.loli.net/2022/03/08/GYXVyn3K6pC9Suk.png)
+    
+    4. $2-ASK$解调及误比特率：有两种方式：一种是相干解调；另一种是包络检波的非相干解调。相干解调器的性能相对较好，而非相干解调和相干解调存在着3dB的性能差异。
+    
+       + 相干解调器也称为同步解调，一般定义为利用与接收信号同频同相的恢复载波来进行的解调。其原理是：首先从接收信号中提取离散的载波分量，使得所恢复的频率及相位与接收的信号同频同相，然后再将恢复载波与接收信号相乘，经过低通滤波器后消除二倍频分量，最后再对信号经过采样、判决，即可恢复出所发送的数据信号。
+       + 非相干解调器：利用包络检波，原理简单。输入->包络检波器->采样->判决->输出
+    
+     ```verilog
+     //verilog 实现2-ASK调制
+     module two_ASK(clk,reset,x,y)
+         input clk; //模块工作时钟
+         input reset;//模块控制信号
+         input x; //输入信号
+         output y; //调制输出信号
+         //cnt是分频计数器
+         reg[1:0] cnt;
+         //carriers是要调制的载波信号，将输入信号clk经过4分频得到
+         reg carries;
+         always@(posedge clk) begin
+             if(!reset) begin
+                 cnt <= 2'b00;
+                 carriers <= 0;
+             end
+             else begin
+                 if(cnt == 2'b11) begin
+                     cnt <= 2'b00;
+                     carriers <= ~carriers;
+                 end
+                 else  begin
+                     carriers <= carriers ;
+                     cnt <= cnt + 1;
+                 end 
+             end
+         end
+         assign y = x & carriers;
+     endmodule
+     //verilog实现2-ASK解调
+     module ASK_two(clk,reset,x,y)
+         input clk;
+         input reset;
+         input x;
+         output y;
+         reg y;
+         reg[2:0] cnt;
+         reg[2:0] m;
+         always@(posedge clk) begin
+             if(!reset) begin
+                 cnt <= 3'b000;
+             end
+             else if(cnt == 3'b111)
+                 cnt <= 3'b000;
+             else cnt <= cnt +1;
+         end
+         always@(posedge x) begin
+             if(!reset) begin
+                 m <= 3'b000;
+             end
+             else begin
+                 if(cnt == 3'b110) begin
+                     if(m <= 3'b010)
+                         y <= 1'b0;
+                     else 
+                         y <= 1'b1;
+                     m <=3'b000;
+                 end
+                 else 
+                     m <= m+1;
+             end 
+         end
+     endmodule
+     ```
+    
+    5. $2-PSK$：输出信号形式为：$s(t)=\begin{cases} \quad Acos(W_c+\phi_1), \qquad b_n=1 \\ -Acos(W_c+\phi_2), \qquad b_n = -1 \end{cases}$  $nT_b \le t \le (n+1)T_b$ ![2-psk.png](https://s2.loli.net/2022/03/08/xkaqGFg79Zbp6Lr.png)
+    
+    6. QPSK调制原理：四进制移相键控信号的正弦波载波有4个可能的离散相位状态，每个载波相位携带2个二进制符号，其信号表达式为$s(t)=Acos(W_ct+\theta_i) \qquad i=1,2,3,4,0\le t \le T_s$,$T_s$为四进制符号间隔，$\{\theta_i：i=1,2,3,4\}$为正弦波载波的相位，有4种可能状态，可以取值为$\theta_i=(i-1)\pi/2$或$\theta_i=(2i-1)\pi/4$.
+    
+       QSPK调制信号说明
+    
+       | 输入信号 | 载波相位 | 载波波形                                         |
+       | -------- | -------- | ------------------------------------------------ |
+       | 00       | 0        | $\overline{}\overline{}\underline{}\underline{}$ |
+       | 01       | $\pi/2$  | $\overline{}\underline{}\underline{}\overline{}$ |
+       | 10       | $\pi$    | $\underline{}\underline{}\overline{}\overline{}$ |
+       | 11       | $3\pi/2$ | $\underline{}\overline{}\overline{}\underline{}$ |
+    
+       ```verilog
+       //假设clk信号的频率是输入信号x频率的4倍
+       module QPSK(clk,reset,x,y)
+           input clk; //系统工作时钟
+           input reset; //系统控制信号
+           input x;      //系统输入信号
+           output y;     //QPSK调制输出信号
+           reg [2:0] cnt ; // 计数器
+           reg [1:0] x_x; //输入信号的中间寄存器
+           reg [3:0] carriers; //4路载波信号
+           reg [1:0] y_y;
+           
+           always@(posedge clk) begin
+               if(!reset)
+                   cnt <= 3'b000;
+               else 
+                   cnt <= cnt +1;
+           end
+           always@(posedge clk) begin
+               if(!reset)
+                   x_x <= 2'b00;
+               else 
+                   if(cnt[1:0]==2'b11)
+                       x_x <= {x_x[0],x};
+               	else 
+                       x_x <= x_x;
+           end
+           always@(posedge clk ) begin
+               if(!reset)
+                   carriers <= 4'b000;
+               else begin
+                   case(begin)
+                       3'b000:begin
+                           y_y <= x_x;
+                           carriers <= 4'b1100;
+                       end
+                       3'b010:carriers <= 4'b1001;
+                       3'b100:carriers <= 4'b0011;
+                       3'b110:carriers <= 4'b0110;
+                       default:carriers <=carriers;
+                       endcase
+                   end
+               end
+       end 
+               assign y=(y_y == 2'b00)?carriers[3]:
+                            (y_y == 2'b01)?carriers[2]:
+                            (y_y == 2'b10)?carriers[1]:
+                            (y_y == 2'b11)?carriers[0]:0;
+       endmodule
+       ```
+    
+       ```verilog
+       module QPSK_two(clk,reset,x,y);
+           input clk;
+           input reset;
+           input x;
+           output y;
+           reg[7:0] temp;
+           reg[7:0] temp2;
+           reg[2:0] cnt;
+           wire[1:0] y1;
+           always@(posedge clk) begin
+               if(!reset)
+                   cnt <= 3'b111;
+               else begin
+                   cnt <= cnt +1;
+                   if(cnt==3'b111)
+                       temp <= temp2;
+                   else 
+                       temp <= temp;
+                   temp2 <= {temp2[6:0],x};
+               end
+           end
+           assign y1=(reset==0)?2'b00:
+               (temp==8'b11110000)?2'b00:
+               (temp==8'b11000011)?2'b01:
+               (temp==8'b00001111)?2'b10:
+               (temp==8'b00111100)?2'b11:2'b00;
+           assign y=(cnt[2]==0)?y[1]:y1[0];
+       endmodule
+       ```
+    
+    7. 恒包络连续相位调制方式，如最小频移键控(MSK)和高斯最小频移键控(GMSK).GMSK是一种特殊的FSK，是MSK的进一步优化。GSM系统就采样了GMSK调制。
+    
+       + $2-FSK$调制解调原理。设输入到调制器的双极性比特流为$\{b_n\},n\in (-\infty,\infty).$$FSK$的输出信号形式为：$s(t)= \begin{cases} s_1(t) = cos(2\pi f_1t+\phi_1), \qquad b_n=1 \\s_2(t)=cos(2\pi f_2t+\phi_2), \qquad b_n=-1  \end{cases}$ ,即当输入符号为“1”时，输出频率为$f_1$的载波；当输入符号位“-1”时，输出频率为$f_2$的载波。![2-FSK.png](https://s2.loli.net/2022/03/08/5OEDkauQNxoZn4s.png) 
+    
+       + $MSK$调制解调原理：当连续相位2-FSK两信号正交时的频率间隔为$1/(2T_b)$，即为MSK时，MSK是一种特殊形式的FSK，具有最小移频键控。定义其调制指数为：$h=\frac{2\Delta f}{1/T_b}=0.5$,$T_b$为输入数据流的比特宽度。因此MSK时连续相位移频键控的特例，当$h=0.5$时，满足在码元交替点相位连续的条件，是FSK为保证良好的误码性能所允许的最小调制指数，且此时波形是正交的。因此，在限带系统中，能够保持恒包络特性。MSK信号的表达式为：$X(t)=Acos(b_k\frac{\pi t}{2T_b}+\phi_k)cosw_ct-Asin(b_k\frac{\pi t}{2T_b}+\phi_k)sinw_kt$,$b_k$为信息位，$b_k=\pm 1$;$\phi_k$为积分常数。![msk.png](https://s2.loli.net/2022/03/08/OBUc5iMWoeDQTF1.png) 
+    
+       + GMSK调制解调原理：尽管MSK信号已具有较好的频谱和误码率性能，但仍不能满足无线通信从邻道辐射低于主瓣达到60dB以上的要求。可将数字基带信号先经过一个高斯滤波器整形(预滤波)，由于成型后的高斯脉冲包络无陡峭边沿，亦无拐点，于是经调制后的已调频率相位路径在MSK基础上获得平滑，这被称为GMSK调制。高斯低通滤波器也称为预调制滤波器，假设其3dB带宽为$B_b$，其冲激响应为：$h(t)=\sqrt\pi\cdot\sqrt\frac{2}{ln2}B_bexp(-\pi^2a^2t^2)$.GMSK信号的表达式为：$s(t)=cos\{w_ct+\frac{\pi}{2T_b} \int^t_{-\infty}[\sum b_ig(\tau-iT-\frac{T_b}{2})]d\tau\}$ 
+    
+         ```verilog
+         //verilog实现频率选择法的2-fsk调制，要求输入信号频率为1khz，输入信号为1时，调制器输出信号是频率为2.5khz，否则输出频率为5khz的方波，系统时钟为20khz
+         module two_fsk(clk,reset,x,y);
+             input clk;
+             input reset;
+             input x;
+             output y;
+             reg [2:0] cnt1;
+             reg [1:0] cnt2;
+             reg f1;
+             reg f2;
+             always@(posedge clk) begin  //2.5khz
+                 if(!reset) begin
+                     cnt1 <= 3'b000;
+                     f1<=0;
+                 end
+                 else 
+                     if(cnt1==3'b111)
+                         cnt1<=3'b000;
+                 else 
+                     cnt1 <= cnt1+1;
+                 f1<=cnt1[2];
+             end
+             always@(posedge clk) begin
+                 if(!reset) begin
+                     cnt2 <= 2'b00;
+                     f2 <=0;
+                 end
+                 else 
+                     if(cnt2==2'b11)
+                         cnt2<=2'b00;
+                 else 
+                     cnt2<=cnt2+1;
+                 f2<=cnt2[1];
+             end
+             assign y=(reset==0)?0:(x==1)?f1:f2;
+         endmodule
+         //对于解调
+         module fsk_two(clk,reset,x,y);
+             input clk;
+             input reset;
+             input x;
+             output y;
+             reg y;
+             reg [4:0] cnt;
+             reg [2:0] cnt1;
+             always@(posedge clk) begin
+                 if(!reset)
+                     cnt <=5'b00000;
+                 else 
+                     if(cnt==5'b10011)
+                         cnt <=5'b00000;
+                 	else
+                         cnt <= cnt + 1;
+             end
+             
+             always@(posedge clk or posedge x) begin
+                 if(!reset)
+                     cnt1 <= 3'b000;
+                 else 
+                     if(cnt==5'b00000) begin
+                         if(cnt1>4)
+                             y<=0;
+                         else 
+                             y<=1;
+                         cnt1<=3'b000;
+                     end
+                 else
+                     cnt1<=cnt1+1;
+             end
+         endmodule
+         //另一实例 p292
+       + QAM:正交幅度调制是由两个正交载波的多电平振幅键控信号叠加而成的，在同样的符号速率下能够提供更高的比特传输速率，而不影响传输的可靠性。
+
+25. OFDM 正交频分复用：OFDM技术使用多载波调制技术，各个子载波互相正交，且各个子载波的频谱有1/2的重叠。每个OFDM符号是多个经过调制的子载波信号之和。如果用N表示子信道的个数，T表示OFDM符号的宽度，$d_i(0,1,\cdots,N-1)$是分配给每个子信道的数据符号，$f_c$是载波频率，则从$t=t_s$开始的OFDM符号可以表示为:$s(t)=Re\{\sum\limits^{N/2}_{i=-N/2} d_{i+N/2}exp[j2\pi(f_c-\frac{i+0.5}{T})(t-t_s)], \quad t_s\le t\le t_s+T \}$ 。接收端第k路子载波信号的解调过程为：将接收信号与第k路的解调信号载波$exp(-j2\pi t(k-N/2)/T)$相乘，然后将得到的结果在OFDM符号内的持续时间T内进行积分，即可获得相应的发送信号$\hat{d_k}$，即$\hat{d_k} = \frac1T \sum\limits^{N/2}_{i=-N/2} d_{i+N/2} \int^{t_s+T}_{t_s}exp(-j2\pi\frac{i-k+N/2}{T}(t-t_s))d_t = d_k$ .
+
+26. 有噪信道编码定理：即香浓第二定理：在有噪信道中，当信息传输速率小于信道容量是，就存在一种编码、解码方法，能够使译码的错误概率任意小。
+
+27. 信道编码的基本思想是将每K个连续的信息比特分成一组，经过适当的数学运算(编码)后得到n个比特的输出，这n个比特组成的序列就称为一个码字。定义$R=\frac kn$为编码速率，简称码率。那么经过信道编码后的码元速率为$R_c=R_bn/k$,其中$R_b$为信息传输速率。乘积码、代数几何码、分组码、卷积码、Turbo码和低密度校验码(LDPC)等编码方法，序列译码、Viterbi译码、软判决译码和迭代译码等译码方法，以及编码与调制相结合的TCM技术。其中，GSM系统采样约束长度为5、码率为1/2的卷积码，大多数太空检测器也采样卷积码；在IS-95系统中，上行链路采用约束长度为9、码率为1/3的卷积码，下行链路采用约束长度为9、码率为1/2的卷积码；Turbo码已在3G移动通信中被采用，在BPSK调制方式下性能距Shannon极限仅有0.1dB的差距；LDPC码在BPSK调制方式下的性能距Shannon极限仅有0.07dB。
+
+    功能上分为3类：
+
+    + 仅具有发现差错功能的检错码，如循环冗余校验(CRC)码、自动请求重传(ARQ)等；
+    + 具有自动纠错功能的纠错码，如循环码中的BCH码、RS码以及卷积码、级联码、Turbo码
+    + 既有检错功能又有纠错功能的信道编码。最典型的是混合ARQ，又称为HARQ
+
+​	从结构和规律上分为两类：线性码（大部分实用化的信道编码均属于线性码）；非线性码 
+
+```verilog
+module crc_16(clk,reset,x,crc_reg,crc_s);
+    input clk;
+    input reset;
+    input x;
+    output [15:0] crc_reg;
+    output crc_s;
+    reg[15:0] crc_reg;
+    reg crc_s;
+    reg[3:0] cnt;
+    wire[15:0] crc_enc;
+    always@(posedge clk) begin
+        if(!reset) begin
+            crc_reg<=0;
+            cnt<=0;
+        end
+        else  begin
+            crc_reg <= crc_enc;
+            cnt <= cnt +1;
+            if(cnt==0)
+                crc_s<=0;
+            else 
+                crc_s<=1;
+        end
+    end
+    assign crc_enc[0]=crc_reg[15]^x;
+    assign crc_enc[1]=crc_reg[0];
+    assign crc_enc[2]=crc_reg[1]^crc_reg[15]^x;
+    assign crc_enc[14:3]=crc_reg[13:2];
+    assign crc_enc[15]=crc_reg[14]^crc_reg[15]^x;
+endmodule
+```
+
+```verilog
+//verilog实现一个(2,1,2)卷积码编码器
+module conv_enc(clk,reset,x,y);
+    input clk;
+    input reset;
+    input x;
+    output y;
+    reg y;
+    parameter s0=2'b00,s1=2'b01,s2=2'b10,s3=2'b11;
+    reg clk1;
+    reg [1:0] state,next_state;
+    reg [1:0] enc_out;
+    always@(posedge clk) begin
+        if(!reset) begin
+            state <= s0;
+            clk1 <= 0;
+            next_state <= s0;
+            enc_out <=2'b00;
+        end
+        else begin
+            clk1 <= !clk1;
+            if(clk1 ==1) begin
+                state <= next_state;
+                y <= enc_out[1];
+            end
+            else begin
+                state <= state;
+                y <= enc_out[0];
+            end
+            case(state)
+                s0:if(x==0) begin
+                    next_state <= s0;
+                    enc_out <= 2'b00;
+                end
+                else begin
+                    next <= s2;
+                    enc_out <= 2'b11;
+                end
+                s1:if(x==0) begin
+                    next_state <= s0;
+                    enc_out <= 2'b11;
+                end
+                else begin
+                    next_state <= s2;
+                    enc_out <=2'b00;
+                end
+                s2:if(x==0) begin
+                    next_state <= s1;
+                    enc_out <= 2'b10;
+                end
+                else begin
+                    next_state <= s3;
+                    enc_out <= 2'b01;
+                end
+                s3:if(x==0) begin
+                    next_state <= s1;
+                    enc_out <= 2'b01;
+                end
+                else begin
+                    next_state <= s3;
+                    enc_out <= 2'b10;
+                end
+                default:if(x==0) begin
+                    next_state <= s0;
+                    enc_out <= 2'b10;
+                end
+                else begin
+                    next_state <= s2;
+                    enc_out <= 2'b01;
+                end
+            endcase
+        end
+    end
+endmodule
+```
+
