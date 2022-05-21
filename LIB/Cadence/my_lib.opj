@@ -27,11 +27,11 @@
     (FileView
       (Path "Design Resources")
       (Path "Design Resources" ".\my_lib.olb")
-      (Select "Design Resources" ".\my_lib.olb"))
+      (Select "Design Resources" ".\my_lib.olb" "ZENER_SOT-23A"))
     (HierarchyView)
     (Doc
       (Type "COrCapturePMDoc")
       (Frame
-        (Placement "44 0 1 -1 -1 -1 -1 0 200 0 1118"))
+        (Placement "44 0 1 -1 -1 -1 -1 0 244 0 1095"))
       (Tab 0)))
   (MPSSessionName "msi"))
